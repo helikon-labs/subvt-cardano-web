@@ -72,27 +72,39 @@ function setupCubeScene() {
         // orbitControls = new OrbitControls(camera, renderer.domElement);
     }
     const textureLoader = new THREE.TextureLoader();
-    const ao = textureLoader.load('./asset/material/sphere-ao.png');
-    const height = textureLoader.load('./asset/material/sphere-height.png');
-    const metallic = textureLoader.load('./asset/material/sphere-metallic.png');
-    const normalOGL = textureLoader.load('./asset/material/sphere-normal-ogl.png');
-    const roughness = textureLoader.load('./asset/material/sphere-roughness.png');
+    const ao = textureLoader.load('./asset/material/sphere-ao-sm.png');
+    const height = textureLoader.load('./asset/material/sphere-height-sm.png');
+    const metallic = textureLoader.load('./asset/material/sphere-metallic-sm.png');
+    const normalOGL = textureLoader.load('./asset/material/sphere-normal-ogl-sm.png');
+    const roughness = textureLoader.load('./asset/material/sphere-roughness-sm.png');
     ao.wrapS = ao.wrapT = THREE.RepeatWrapping;
     metallic.wrapS = metallic.wrapT = THREE.RepeatWrapping;
     roughness.wrapS = roughness.wrapT = THREE.RepeatWrapping;
+
+    const sphereMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x4F6ADA), // 0x1111FF
+        aoMap: ao,
+        bumpMap: height,
+        bumpScale: 0.75,
+        metalnessMap: metallic,
+        normalMap: normalOGL,
+        roughnessMap: roughness,
+        roughness: 1.0,
+        metalness: 0.2,
+    });
 
     const rgbeLoader = new RGBELoader();
     const objLoader = new OBJLoader();
     const mtlLoader = new MTLLoader();
 
-    rgbeLoader.load('./asset/cube_environment_1k.hdr', (texture) => {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        scene.environment = texture; // Set it as environment lighting as well
-        mtlLoader.load('./asset/cube.mtl', (materials) => {
-            materials.preload();
-            objLoader.setMaterials(materials);
-            objLoader.load('./asset/cube.obj', (obj) => {
-                obj.traverse((child) => {
+    rgbeLoader.load('./asset/cube_environment_1k.hdr', (cubeEnvironment) => {
+        cubeEnvironment.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = cubeEnvironment;
+        mtlLoader.load('./asset/cube.mtl', (cubeMaterial) => {
+            cubeMaterial.preload();
+            objLoader.setMaterials(cubeMaterial);
+            objLoader.load('./asset/cube.obj', (cube) => {
+                cube.traverse((child) => {
                     if (child.isMesh) {
                         const material = child.material;
                         material.envMap = scene.environment;
@@ -106,35 +118,24 @@ function setupCubeScene() {
                     }
                 });
                 // Position and add the object to the scene
-                obj.position.set(0, 0, 0);
-                group.add(obj);
+                cube.position.set(0, 0, 0);
+                objLoader.load('./asset/ada_spheres.obj', (spheres) => {
+                    spheres.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = sphereMaterial;
+                        }
+                    });
+                    // Position and add the object to the scene
+                    spheres.position.set(0, 0, 0);
+                    spheres.scale.x = 4;
+                    spheres.scale.y = 4;
+                    spheres.scale.z = 4;
+
+                    group.add(cube);
+                    group.add(spheres);
+                });
             });
         });
-    });
-
-    const material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(0x4F6ADA), // 0x1111FF
-        aoMap: ao,
-        bumpMap: height,
-        bumpScale: 0.75,
-        metalnessMap: metallic,
-        normalMap: normalOGL,
-        roughnessMap: roughness,
-        roughness: 1.0,
-        metalness: 0.2,
-    });
-    objLoader.load('./asset/ada_spheres.obj', (obj) => {
-        obj.traverse((child) => {
-            if (child.isMesh) {
-                child.material = material;
-            }
-        });
-        // Position and add the object to the scene
-        obj.position.set(0, 0, 0);
-        obj.scale.x = 4;
-        obj.scale.y = 4;
-        obj.scale.z = 4;
-        group.add(obj);
     });
 
     function onWindowResize() {
